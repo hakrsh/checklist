@@ -113,13 +113,13 @@
     padding: 9px 10px 9px 14px;
     margin: 0 -10px;
     border-radius: 12px;
-    cursor: grab;
     transition: background .12s ease, opacity .12s ease;
   }
 
   .item:hover { background: var(--panel-hover); }
 
-  .item.dragging { opacity: .45; cursor: grabbing; }
+  .item.dragging { opacity: .45; }
+  .item.dragging .grip { cursor: grabbing; }
 
   .item.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
   .item.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
@@ -142,6 +142,9 @@
     background: transparent;
     cursor: pointer;
     padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
     transition: background .15s ease, border-color .15s ease, transform .1s ease;
   }
 
@@ -170,6 +173,8 @@
     font-size: 18px;
     color: var(--text);
     word-break: break-word;
+    user-select: text;
+    -webkit-user-select: text;
     transition: color .15s ease;
   }
 
@@ -205,6 +210,8 @@
     border-radius: 9px;
     cursor: pointer;
     opacity: 0;
+    user-select: none;
+    -webkit-user-select: none;
     transition: opacity .12s ease, background .12s ease, color .12s ease;
   }
 
@@ -214,6 +221,35 @@
   .del:hover {
     color: var(--danger);
     background: var(--danger-soft);
+  }
+
+  .grip {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--faint);
+    font-size: 17px;
+    letter-spacing: -3px;
+    line-height: 1;
+    cursor: grab;
+    opacity: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: element;
+    transition: opacity .12s ease, color .12s ease, background .12s ease;
+  }
+
+  .item:hover .grip,
+  .grip:focus-visible { opacity: 1; }
+
+  .grip:hover {
+    color: var(--muted);
+    background: var(--panel-hover);
   }
 
   .empty {
@@ -255,6 +291,7 @@
 
   .check:focus-visible,
   .del:focus-visible,
+  .grip:focus-visible,
   .action:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -350,7 +387,6 @@
 
   let items = [];
   let lastAdded = new Set();
-  let dbl = null;
   let confirmAll = null;
   let toastTimer = null;
   let pendingUndo = null;
@@ -407,7 +443,6 @@
     li.className = 'item' + (it.done ? ' done' : '');
     if (lastAdded.has(it.id)) li.classList.add('new');
     li.dataset.id = it.id;
-    li.draggable = true;
 
     const check = document.createElement('button');
     check.className = 'check';
@@ -424,7 +459,15 @@
     del.textContent = '\u00d7';
     del.setAttribute('aria-label', 'Delete item');
 
-    li.append(check, text, del);
+    const grip = document.createElement('button');
+    grip.className = 'grip';
+    grip.type = 'button';
+    grip.draggable = true;
+    grip.textContent = '\u2807\u2807';
+    grip.setAttribute('aria-label', 'Reorder item');
+    grip.setAttribute('title', 'Drag to reorder');
+
+    li.append(check, text, grip, del);
     return li;
   }
 
@@ -482,14 +525,6 @@
     const it = getItem(id);
     if (!it) return;
     it.done = !it.done;
-    save();
-    render();
-  }
-
-  function setDone(id, value) {
-    const it = getItem(id);
-    if (!it || it.done === value) return;
-    it.done = value;
     save();
     render();
   }
@@ -580,28 +615,18 @@
       return;
     }
 
-    if (e.target.closest('.edit-input')) return;
-
-    if (!e.target.closest('.check') && !e.target.closest('.text')) return;
-
-    const id = li.dataset.id;
-
-    if (dbl && dbl.id === id) {
-      const wasDone = dbl.wasDone;
-      clearTimeout(dbl.timer);
-      dbl = null;
-      setDone(id, wasDone);
-      startEdit(id);
-      return;
+    if (e.target.closest('.check')) {
+      toggleItem(li.dataset.id);
     }
+  });
 
-    const wasDone = getItem(id) && getItem(id).done;
-    toggleItem(id);
-    dbl = {
-      id,
-      wasDone,
-      timer: setTimeout(() => { dbl = null; }, 300)
-    };
+  listEl.addEventListener('dblclick', (e) => {
+    const li = e.target.closest('.item');
+    if (!li) return;
+    if (e.target.closest('.check')) return;
+    if (e.target.closest('.grip')) return;
+    if (e.target.closest('.del')) return;
+    startEdit(li.dataset.id);
   });
 
   function clearDropMarks() {
@@ -624,6 +649,7 @@
   listEl.addEventListener('dragstart', (e) => {
     const li = e.target.closest('.item');
     if (!li) return;
+    if (!e.target.closest('.grip')) return;
     dragId = li.dataset.id;
     li.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
