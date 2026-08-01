@@ -18,4 +18,4 @@ Open `index.html` in any modern browser. All data is stored locally in your brow
 
 ## Demo
 
-https://github.com/hakrsh/checklist
+[https://github.com/hakrsh/checklist](https://hakrsh.github.io/checklist/)
