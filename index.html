@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Checklist</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='42' fill='%2358743f'/%3E%3Cpath d='M32 52 l12 12 l24 -26' stroke='%23fff' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --panel-hover: rgba(30, 28, 20, .05);
+    --text: #24221c;
+    --muted: #98937f;
+    --faint: #b5b1a2;
+    --line: #e6e3d9;
+    --accent: #58743f;
+    --accent-soft: rgba(88, 116, 63, .12);
+    --danger: #a0533f;
+    --danger-soft: rgba(160, 83, 63, .1);
+    --check-border: #c9c5b6;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--accent-soft); }
+
+  .page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: clamp(28px, 7vw, 80px) clamp(20px, 5vw, 40px) 110px;
+  }
+
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .status {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .status.done { color: var(--accent); font-weight: 500; }
+
+  .progress {
+    height: 3px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width .35s ease;
+  }
+
+  .add { margin-bottom: 6px; }
+
+  .add input {
+    width: 100%;
+    font: inherit;
+    font-size: 18px;
+    padding: 12px 2px 13px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s ease;
+  }
+
+  .add input::placeholder { color: var(--faint); }
+  .add input:focus { border-bottom-color: var(--accent); }
+
+  .list { list-style: none; margin: 10px 0 0; padding: 0; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 9px 10px 9px 14px;
+    margin: 0 -10px;
+    border-radius: 12px;
+    cursor: grab;
+    transition: background .12s ease, opacity .12s ease;
+  }
+
+  .item:hover { background: var(--panel-hover); }
+
+  .item.dragging { opacity: .45; cursor: grabbing; }
+
+  .item.drop-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+  .item.drop-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
+
+  .item.new { animation: item-in .22s ease; }
+
+  @keyframes item-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .check {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border: 1.5px solid var(--check-border);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+
+  .check:hover { border-color: var(--accent); }
+  .check:active { transform: scale(.92); }
+
+  .check::after {
+    content: "";
+    width: 5px;
+    height: 9px;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(45deg) scale(0);
+    transition: transform .15s ease;
+  }
+
+  .item.done .check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .item.done .check::after { transform: rotate(45deg) scale(1); }
+
+  .text {
+    flex: 1;
+    font-size: 18px;
+    color: var(--text);
+    word-break: break-word;
+    transition: color .15s ease;
+  }
+
+  .item.done .text {
+    color: var(--faint);
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+  }
+
+  .edit-input {
+    flex: 1;
+    font: inherit;
+    font-size: 18px;
+    padding: 0;
+    border: 0;
+    border-bottom: 1.5px solid var(--accent);
+    background: transparent;
+    color: var(--text);
+    outline: none;
+  }
+
+  .del {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 19px;
+    line-height: 1;
+    border-radius: 9px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease, background .12s ease, color .12s ease;
+  }
+
+  .item:hover .del,
+  .del:focus-visible { opacity: 1; }
+
+  .del:hover {
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    padding: 52px 0 24px;
+  }
+
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .count { font-size: 13px; color: var(--faint); }
+
+  .actions { display: flex; gap: 18px; }
+
+  .action {
+    border: 0;
+    background: none;
+    padding: 4px 2px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color .12s ease;
+  }
+
+  .action:hover:not(:disabled) { color: var(--text); }
+  .action.danger:hover:not(:disabled) { color: var(--danger); }
+  .action:disabled { opacity: .35; cursor: default; }
+
+  .check:focus-visible,
+  .del:focus-visible,
+  .action:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 10px);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 10;
+    max-width: calc(100vw - 32px);
+  }
+
+  .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+
+  .toast button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #bcd3a4;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .12s ease;
+  }
+
+  .toast button:hover { color: #fff; }
+  .toast button:focus-visible { outline: 2px solid #bcd3a4; outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<main class="page">
+  <header class="top">
+    <h1>Checklist</h1>
+    <p class="status" id="status">Nothing here yet</p>
+  </header>
+
+  <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <form class="add" id="add-form">
+    <input id="add-input" type="text" placeholder="Add an item, or paste a list" autocomplete="off" spellcheck="false">
+  </form>
+
+  <ul class="list" id="list"></ul>
+  <p class="empty" id="empty">Your list is empty. Type above, or paste a list of lines &mdash; each line becomes an item.</p>
+
+  <footer class="foot">
+    <span class="count">Saved in this browser &middot; synced across tabs</span>
+    <div class="actions">
+      <button class="action" id="clear-done" type="button" disabled>Clear completed</button>
+      <button class="action danger" id="clear-all" type="button" disabled>Clear all</button>
+    </div>
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status">
+  <span id="toast-msg"></span>
+  <button id="toast-undo" type="button" hidden>Undo</button>
+</div>
+
+<script>
+(function () {
+  const KEY = 'checklist.v1';
+
+  const addForm = document.getElementById('add-form');
+  const addInput = document.getElementById('add-input');
+  const listEl = document.getElementById('list');
+  const emptyEl = document.getElementById('empty');
+  const statusEl = document.getElementById('status');
+  const progressFill = document.getElementById('progress-fill');
+  const clearDoneBtn = document.getElementById('clear-done');
+  const clearAllBtn = document.getElementById('clear-all');
+  const toastEl = document.getElementById('toast');
+  const toastMsg = document.getElementById('toast-msg');
+  const toastUndo = document.getElementById('toast-undo');
+
+  let items = [];
+  let lastAdded = new Set();
+  let dbl = null;
+  let confirmAll = null;
+  let toastTimer = null;
+  let pendingUndo = null;
+  let dragId = null;
+
+  const uid = () =>
+    (crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+
+  const getItem = (id) => items.find((i) => i.id === id);
+
+  function parseLines(text) {
+    return text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(items));
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      items = raw ? JSON.parse(raw) : [];
+    } catch (err) {
+      items = [];
+    }
+    if (!Array.isArray(items)) items = [];
+  }
+
+  function runUndo() {
+    toastEl.classList.remove('show');
+    if (!pendingUndo) return;
+    const fn = pendingUndo;
+    pendingUndo = null;
+    fn();
+  }
+
+  function toast(msg, undoFn) {
+    pendingUndo = undoFn || null;
+    toastMsg.textContent = msg;
+    toastUndo.hidden = !undoFn;
+    toastUndo.onclick = undoFn ? runUndo : null;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove('show');
+      pendingUndo = null;
+    }, undoFn ? 6000 : 2000);
+  }
+
+  function createRow(it) {
+    const li = document.createElement('li');
+    li.className = 'item' + (it.done ? ' done' : '');
+    if (lastAdded.has(it.id)) li.classList.add('new');
+    li.dataset.id = it.id;
+    li.draggable = true;
+
+    const check = document.createElement('button');
+    check.className = 'check';
+    check.type = 'button';
+    check.setAttribute('aria-label', it.done ? 'Mark as not done' : 'Mark as done');
+
+    const text = document.createElement('span');
+    text.className = 'text';
+    text.textContent = it.text;
+
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.textContent = '\u00d7';
+    del.setAttribute('aria-label', 'Delete item');
+
+    li.append(check, text, del);
+    return li;
+  }
+
+  function render() {
+    listEl.textContent = '';
+    const frag = document.createDocumentFragment();
+    for (const it of items) frag.appendChild(createRow(it));
+    listEl.appendChild(frag);
+    lastAdded.clear();
+    updateStatus();
+    emptyEl.hidden = items.length > 0;
+  }
+
+  function updateStatus() {
+    const total = items.length;
+    const done = items.filter((i) => i.done).length;
+
+    if (total === 0) {
+      statusEl.textContent = 'Nothing here yet';
+      statusEl.classList.remove('done');
+    } else if (done === total) {
+      statusEl.textContent = 'All done';
+      statusEl.classList.add('done');
+    } else {
+      statusEl.textContent = done + ' of ' + total + ' done';
+      statusEl.classList.remove('done');
+    }
+
+    progressFill.style.width = total ? (done / total) * 100 + '%' : '0%';
+    clearDoneBtn.disabled = done === 0;
+    clearAllBtn.disabled = total === 0;
+
+    if (total === 0 && clearAllBtn.textContent !== 'Clear all') {
+      clearAllBtn.textContent = 'Clear all';
+      if (confirmAll) { clearTimeout(confirmAll); confirmAll = null; }
+    }
+  }
+
+  function addItems(texts) {
+    if (!texts.length) return;
+    const ids = [];
+    for (const t of texts) {
+      const id = uid();
+      items.push({ id, text: t, done: false });
+      ids.push(id);
+    }
+    lastAdded = new Set(ids);
+    save();
+    render();
+    if (texts.length > 1) toast('Added ' + texts.length + ' items');
+    addInput.focus();
+  }
+
+  function toggleItem(id) {
+    const it = getItem(id);
+    if (!it) return;
+    it.done = !it.done;
+    save();
+    render();
+  }
+
+  function setDone(id, value) {
+    const it = getItem(id);
+    if (!it || it.done === value) return;
+    it.done = value;
+    save();
+    render();
+  }
+
+  function removeItem(id) {
+    const removed = getItem(id);
+    if (!removed) return;
+    const snapshot = items.slice();
+    items = items.filter((i) => i.id !== id);
+    save();
+    render();
+    toast('Deleted "' + removed.text + '"', () => {
+      items = snapshot;
+      save();
+      render();
+    });
+  }
+
+  function startEdit(id) {
+    const it = getItem(id);
+    if (!it) return;
+    const li = listEl.querySelector('.item[data-id="' + id + '"]');
+    if (!li) return;
+
+    const textEl = li.querySelector('.text');
+    const input = document.createElement('input');
+    input.className = 'edit-input';
+    input.value = it.text;
+    textEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let finished = false;
+    const finish = (commit) => {
+      if (finished) return;
+      finished = true;
+      const value = input.value.trim();
+      if (commit) {
+        if (value) it.text = value;
+        else removeItem(id);
+      }
+      render();
+      addInput.focus();
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') finish(true);
+      else if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  addForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = addInput.value.trim();
+    if (!value) return;
+    addInput.value = '';
+    addItems([value]);
+  });
+
+  addInput.addEventListener('paste', (e) => {
+    const text = e.clipboardData.getData('text');
+    if (!text.includes('\n')) return;
+    e.preventDefault();
+    addInput.value = '';
+    addItems(parseLines(text));
+  });
+
+  document.addEventListener('paste', (e) => {
+    if (e.defaultPrevented) return;
+    const t = e.target;
+    if (t === addInput) return;
+    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable) return;
+    const text = e.clipboardData.getData('text');
+    const lines = parseLines(text);
+    if (lines.length) {
+      e.preventDefault();
+      addItems(lines);
+    }
+  });
+
+  listEl.addEventListener('click', (e) => {
+    const li = e.target.closest('.item');
+    if (!li) return;
+
+    if (e.target.closest('.del')) {
+      removeItem(li.dataset.id);
+      return;
+    }
+
+    if (e.target.closest('.edit-input')) return;
+
+    if (!e.target.closest('.check') && !e.target.closest('.text')) return;
+
+    const id = li.dataset.id;
+
+    if (dbl && dbl.id === id) {
+      const wasDone = dbl.wasDone;
+      clearTimeout(dbl.timer);
+      dbl = null;
+      setDone(id, wasDone);
+      startEdit(id);
+      return;
+    }
+
+    const wasDone = getItem(id) && getItem(id).done;
+    toggleItem(id);
+    dbl = {
+      id,
+      wasDone,
+      timer: setTimeout(() => { dbl = null; }, 300)
+    };
+  });
+
+  function clearDropMarks() {
+    listEl.querySelectorAll('.drop-before, .drop-after').forEach((el) =>
+      el.classList.remove('drop-before', 'drop-after'));
+  }
+
+  function getDragAfterElement(y) {
+    const others = [...listEl.children].filter((el) => !el.classList.contains('dragging'));
+    return others.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      }
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  listEl.addEventListener('dragstart', (e) => {
+    const li = e.target.closest('.item');
+    if (!li) return;
+    dragId = li.dataset.id;
+    li.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragId);
+  });
+
+  listEl.addEventListener('dragover', (e) => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    clearDropMarks();
+    const after = getDragAfterElement(e.clientY);
+    if (after) {
+      after.classList.add('drop-before');
+    } else {
+      const others = [...listEl.children].filter((el) => !el.classList.contains('dragging'));
+      if (others.length) others[others.length - 1].classList.add('drop-after');
+    }
+  });
+
+  listEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!dragId) return;
+    const after = getDragAfterElement(e.clientY);
+    const fromIndex = items.findIndex((i) => i.id === dragId);
+    if (fromIndex === -1) return;
+    const toIndex = after == null
+      ? items.length
+      : items.findIndex((i) => i.id === after.dataset.id);
+    const [moved] = items.splice(fromIndex, 1);
+    items.splice(toIndex > fromIndex ? toIndex - 1 : toIndex, 0, moved);
+    save();
+    render();
+  });
+
+  listEl.addEventListener('dragend', () => {
+    clearDropMarks();
+    const dragging = listEl.querySelector('.item.dragging');
+    if (dragging) dragging.classList.remove('dragging');
+    dragId = null;
+  });
+
+  clearDoneBtn.addEventListener('click', () => {
+    const count = items.filter((i) => i.done).length;
+    if (!count) return;
+    const snapshot = items.slice();
+    items = items.filter((i) => !i.done);
+    save();
+    render();
+    toast('Cleared ' + count + ' completed', () => {
+      items = snapshot;
+      save();
+      render();
+    });
+  });
+
+  clearAllBtn.addEventListener('click', () => {
+    if (!items.length) return;
+    if (confirmAll) {
+      clearTimeout(confirmAll);
+      confirmAll = null;
+      const snapshot = items.slice();
+      items = [];
+      save();
+      render();
+      clearAllBtn.textContent = 'Clear all';
+      toast('List cleared', () => {
+        items = snapshot;
+        save();
+        render();
+      });
+      return;
+    }
+    clearAllBtn.textContent = 'Sure?';
+    confirmAll = setTimeout(() => {
+      confirmAll = null;
+      clearAllBtn.textContent = 'Clear all';
+    }, 3000);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    if (e.key.toLowerCase() !== 'z') return;
+    const t = e.target;
+    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable) return;
+    if (!pendingUndo) return;
+    e.preventDefault();
+    runUndo();
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY) return;
+    load();
+    render();
+  });
+
+  load();
+  render();
+  addInput.focus();
+})();
+</script>
+</body>
+</html>
